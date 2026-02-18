@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Perpustakaan SMK Negeri 4 Manado</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <h1>Login Perpustakaan</h1>
+      <p>Pilih jenis login sesuai peran Anda.</p>
+      <div class="login-tabs">
+        <button class="login-tab active" data-target="admin">Admin</button>
+        <button class="login-tab" data-target="anggota">Anggota</button>
+      </div>
+      <div class="login-forms">
+        <div id="login-admin" class="login-form active">
+          <div class="field">
+            <label for="admin-username">Username Admin</label>
+            <input id="admin-username" type="text" placeholder="admin">
+          </div>
+          <div class="field">
+            <label for="admin-password">Password</label>
+            <input id="admin-password" type="password" placeholder="••••••••">
+          </div>
+          <button id="admin-login-btn" class="btn full primary">Login Admin</button>
+        </div>
+        <div id="login-member" class="login-form">
+          <div class="field">
+            <label for="member-id-login">ID Anggota</label>
+            <input id="member-id-login" type="text" placeholder="ID sesuai kartu">
+          </div>
+          <button id="member-login-btn" class="btn full ghost">Login Anggota</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <img id="app-logo-img" alt="Logo SMK Negeri 4 Manado">
+          <span class="brand-logo-fallback">4</span>
+        </div>
+        <div class="brand-text">
+          <span class="brand-school">SMK Negeri 4 Manado</span>
+          <span class="brand-app">Aplikasi Perpustakaan Digital</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="logout-btn" class="btn ghost">Logout</button>
+        <label class="btn ghost">
+          <span>Upload Logo</span>
+          <input id="upload-logo-input" type="file" accept="image/*" hidden>
+        </label>
+        <button id="download-template" class="btn ghost">Download Template Excel</button>
+        <button id="export-excel" class="btn ghost">Export Data Excel</button>
+        <label class="btn primary">
+          <span>Upload Data Excel</span>
+          <input id="excel-input" type="file" accept=".xlsx,.xls" hidden>
+        </label>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <nav class="main-nav">
+        <button class="nav-item active" data-target="beranda">Beranda</button>
+        <button class="nav-item" data-target="buku">Buku</button>
+        <button class="nav-item" data-target="anggota">Anggota</button>
+        <button class="nav-item" data-target="cetak">Cetak Kartu Anggota</button>
+        <button class="nav-item" data-target="pinjaman">Pinjaman</button>
+      </nav>
+
+      <section id="page-beranda" class="page-section active">
+        <section class="content">
+          <div class="content-header">
+            <h1>Beranda Perpustakaan</h1>
+            <p>Ringkasan singkat aplikasi perpustakaan SMK Negeri 4 Manado.</p>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <tbody>
+                <tr>
+                  <td>Gunakan menu Buku untuk mengelola koleksi buku dari file Excel.</td>
+                </tr>
+                <tr>
+                  <td>Menu Anggota untuk menyimpan data siswa/guru sebagai anggota perpustakaan.</td>
+                </tr>
+                <tr>
+                  <td>Menu Cetak Kartu Anggota untuk membuat kartu anggota sederhana yang bisa diprint.</td>
+                </tr>
+                <tr>
+                  <td>Menu Pinjaman untuk mencatat transaksi peminjaman buku.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="admin-settings-card" class="form-card" style="margin-top: 14px; display: none;">
+            <div class="form-title">Pengaturan Admin</div>
+            <div class="field">
+              <label for="admin-old-password">Password lama</label>
+              <input id="admin-old-password" type="password" placeholder="Password sekarang">
+            </div>
+            <div class="field">
+              <label for="admin-new-password">Password baru</label>
+              <input id="admin-new-password" type="password" placeholder="Password baru">
+            </div>
+            <div class="field">
+              <label for="admin-new-password-confirm">Ulangi password baru</label>
+              <input id="admin-new-password-confirm" type="password" placeholder="Ulangi password baru">
+            </div>
+            <button id="admin-change-password-btn" class="btn full ghost">Ganti Password Admin</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="page-buku" class="page-section">
+        <div class="page-grid">
+          <section class="sidebar">
+            <div class="summary-card">
+              <div class="summary-label">Total Buku</div>
+              <div id="total-books" class="summary-value">0</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-label">Kategori</div>
+              <div id="total-categories" class="summary-value">0</div>
+            </div>
+
+            <div class="filter-card">
+              <div class="field">
+                <label for="search-input">Pencarian</label>
+                <input id="search-input" type="text" placeholder="Cari judul, penulis, atau kategori">
+              </div>
+              <div class="field">
+                <label for="category-filter">Filter Kategori</label>
+                <select id="category-filter">
+                  <option value="">Semua Kategori</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-card">
+              <div class="form-title">Tambah Buku Manual</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="kode-buku">Kode Buku</label>
+                  <input id="kode-buku" type="text" placeholder="KB-001">
+                </div>
+                <div class="field">
+                  <label for="judul-buku">Judul Buku</label>
+                  <input id="judul-buku" type="text" placeholder="Judul buku">
+                </div>
+                <div class="field">
+                  <label for="penulis-buku">Penulis</label>
+                  <input id="penulis-buku" type="text" placeholder="Nama penulis">
+                </div>
+                <div class="field">
+                  <label for="kategori-buku">Kategori</label>
+                  <input id="kategori-buku" type="text" placeholder="Produktif, Umum, dsb.">
+                </div>
+                <div class="field">
+                  <label for="tahun-buku">Tahun Terbit</label>
+                  <input id="tahun-buku" type="number" placeholder="2024" min="1900" max="2100">
+                </div>
+                <div class="field">
+                  <label for="stok-buku">Stok</label>
+                  <input id="stok-buku" type="number" placeholder="1" min="0">
+                </div>
+              </div>
+              <button id="add-book" class="btn full primary">Tambah Buku</button>
+            </div>
+          </section>
+
+          <section class="content">
+            <div class="content-header">
+              <h1>Daftar Koleksi Buku</h1>
+              <p>Upload file Excel atau tambah data buku secara manual.</p>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="select-all-books"></th>
+                    <th>No</th>
+                    <th>Kode</th>
+                    <th>Judul</th>
+                    <th>Penulis</th>
+                    <th>Kategori</th>
+                    <th>Tahun</th>
+                    <th>Stok</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="books-body">
+                  <tr class="empty-row">
+                    <td colspan="9">Belum ada data. Upload Excel atau tambah buku.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="bulk-actions">
+              <button id="delete-selected-books" class="btn ghost">Hapus Buku Terpilih</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="page-anggota" class="page-section">
+        <div class="page-grid">
+          <section class="sidebar">
+            <div class="form-card">
+              <div class="form-title">Tambah Anggota</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="anggota-id">ID Anggota</label>
+                  <input id="anggota-id" type="text" placeholder="NIS / NIP">
+                </div>
+                <div class="field">
+                  <label for="anggota-nama">Nama Lengkap</label>
+                  <input id="anggota-nama" type="text" placeholder="Nama siswa/guru">
+                </div>
+                <div class="field">
+                  <label for="anggota-kelas">Kelas</label>
+                  <input id="anggota-kelas" type="text" placeholder="X TKJ 1">
+                </div>
+                <div class="field">
+                  <label for="anggota-jurusan">Jurusan</label>
+                  <input id="anggota-jurusan" type="text" placeholder="TKJ, RPL, dll.">
+                </div>
+              </div>
+              <button id="add-member" class="btn full primary">Tambah Anggota</button>
+            </div>
+          </section>
+          <section class="content">
+            <div class="content-header">
+              <div>
+                <h1>Data Anggota Perpustakaan</h1>
+                <p>Daftar siswa/guru yang terdaftar sebagai anggota perpustakaan.</p>
+              </div>
+              <div class="header-actions">
+                <button id="download-template-members" class="btn ghost">Template Excel Anggota</button>
+                <button id="export-members" class="btn ghost">Export Anggota Excel</button>
+                <label class="btn primary">
+                  <span>Upload Excel Anggota</span>
+                  <input id="import-members-input" type="file" accept=".xlsx,.xls" hidden>
+                </label>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="select-all-members"></th>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Nama</th>
+                    <th>Kelas</th>
+                    <th>Jurusan</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="members-body">
+                  <tr class="empty-row">
+                    <td colspan="7">Belum ada data anggota.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="bulk-actions">
+              <button id="delete-selected-members" class="btn ghost">Hapus Anggota Terpilih</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="page-cetak" class="page-section">
+        <section class="content">
+          <div class="content-header">
+            <h1>Cetak Kartu Anggota</h1>
+            <p>Pilih anggota untuk menampilkan kartu, lalu cetak.</p>
+          </div>
+          <div class="filter-card" style="margin-bottom: 12px;">
+            <div class="field">
+              <label for="kartu-anggota-select">Pilih Anggota</label>
+              <select id="kartu-anggota-select">
+                <option value="">Pilih salah satu anggota</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-preview">
+            <div class="kartu-anggota">
+              <div class="kartu-header">
+                <div class="kartu-logo">
+                  <img id="card-logo-img" alt="Logo SMK Negeri 4 Manado">
+                  <span class="card-logo-fallback">4</span>
+                </div>
+                <div class="kartu-title">
+                  <span>SMK Negeri 4 Manado</span>
+                  <strong>Kartu Anggota Perpustakaan</strong>
+                </div>
+              </div>
+              <div class="kartu-body">
+                <div class="kartu-main">
+                  <div class="kartu-foto-wrapper">
+                    <div class="kartu-foto-kotak">
+                      <span>Foto</span>
+                    </div>
+                  </div>
+                  <div class="kartu-info">
+                    <div class="kartu-row">
+                      <span class="kartu-label">Nama</span>
+                      <span class="kartu-separator">:</span>
+                      <strong class="kartu-value" id="kartu-nama">-</strong>
+                    </div>
+                    <div class="kartu-row">
+                      <span class="kartu-label">ID</span>
+                      <span class="kartu-separator">:</span>
+                      <strong class="kartu-value" id="kartu-id">-</strong>
+                    </div>
+                    <div class="kartu-row">
+                      <span class="kartu-label">Kelas</span>
+                      <span class="kartu-separator">:</span>
+                      <strong class="kartu-value" id="kartu-kelas">-</strong>
+                    </div>
+                    <div class="kartu-row">
+                      <span class="kartu-label">Jurusan</span>
+                      <span class="kartu-separator">:</span>
+                      <strong class="kartu-value" id="kartu-jurusan">-</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="kartu-barcode-wrapper">
+                  <svg id="kartu-barcode"></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button id="print-card" class="btn primary" style="margin-top: 12px;">Cetak Kartu</button>
+          <div class="cards-bulk">
+            <div class="content-header" style="margin-top: 12px;">
+              <h1>Cetak Banyak Kartu</h1>
+              <p>Pilih mode cetak: semua anggota atau hanya anggota terpilih.</p>
+            </div>
+            <div id="cards-grid" class="cards-grid"></div>
+            <div class="bulk-actions" style="margin-top: 12px;">
+              <button id="print-all-members" class="btn ghost">Cetak Semua Anggota</button>
+              <button id="print-selected-members" class="btn primary">Cetak Anggota Terpilih</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="page-pinjaman" class="page-section">
+        <div class="page-grid">
+          <section class="sidebar" id="pinjaman-sidebar">
+            <div class="form-card">
+              <div class="form-title">Tambah Pinjaman</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="pinjaman-anggota">Anggota</label>
+                  <select id="pinjaman-anggota">
+                    <option value="">Pilih anggota</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="pinjaman-buku">Buku (kode/judul)</label>
+                  <input id="pinjaman-buku" type="text" placeholder="KB-001 / Judul Buku">
+                </div>
+                <div class="field">
+                  <label for="pinjaman-tanggal-pinjam">Tanggal Pinjam</label>
+                  <input id="pinjaman-tanggal-pinjam" type="date">
+                </div>
+                <div class="field">
+                  <label for="pinjaman-tanggal-kembali">Tanggal Kembali</label>
+                  <input id="pinjaman-tanggal-kembali" type="date">
+                </div>
+              </div>
+              <button id="add-loan" class="btn full primary">Simpan Pinjaman</button>
+            </div>
+            <div class="form-card">
+              <div class="form-title">Pengembalian Manual</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="pengembalian-anggota-id">ID Anggota</label>
+                  <input id="pengembalian-anggota-id" type="text" placeholder="NIS/NIP sesuai kartu">
+                </div>
+                <div class="field">
+                  <label for="pengembalian-buku">Buku (kode/judul)</label>
+                  <input id="pengembalian-buku" type="text" placeholder="KB-001 / Judul Buku">
+                </div>
+                <div class="field">
+                  <label for="pengembalian-tanggal">Tanggal Pengembalian</label>
+                  <input id="pengembalian-tanggal" type="date">
+                </div>
+              </div>
+              <button id="return-loan" class="btn full ghost">Simpan Pengembalian</button>
+            </div>
+          </section>
+          <section class="content">
+            <div class="content-header">
+              <div>
+                <h1>Data Pinjaman Buku</h1>
+                <p>Daftar transaksi peminjaman buku perpustakaan.</p>
+              </div>
+              <div class="header-actions">
+                <button id="delete-selected-loans" class="btn ghost">Hapus Pinjaman Terpilih</button>
+                <button id="download-template-loans" class="btn ghost">Template Excel Pinjaman</button>
+                <button id="export-loans" class="btn ghost">Export Pinjaman Excel</button>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="select-all-loans"></th>
+                    <th>No</th>
+                    <th>Anggota</th>
+                    <th>Buku</th>
+                    <th>Tgl Pinjam</th>
+                    <th>Tgl Kembali</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="loans-body">
+                  <tr class="empty-row">
+                    <td colspan="8">Belum ada data pinjaman.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="announcement-card">
+              <div class="announcement-header">
+                <h2>Pesan untuk Anggota</h2>
+                <p>Informasi atau pengumuman penting dari admin perpustakaan.</p>
+              </div>
+              <div id="announcement-text-display" class="announcement-display">
+                Tidak ada pesan khusus dari admin.
+              </div>
+              <div id="announcement-admin-box" class="announcement-admin-box">
+                <div class="field">
+                  <label for="announcement-input">Tulis / ubah pesan untuk siswa</label>
+                  <textarea id="announcement-input" rows="2" placeholder="Contoh: Pengembalian buku maksimal hari Jumat minggu ini ..."></textarea>
+                </div>
+                <button id="announcement-save" class="btn ghost">Simpan Pesan</button>
+              </div>
+            </div>
+            <div class="comments-card">
+              <div class="comments-header">
+                <h2>Komentar Anggota</h2>
+                <p>Anggota dapat menyampaikan pesan terkait pinjaman kepada petugas.</p>
+              </div>
+              <div id="member-comment-box" class="member-comment-box">
+                <div class="field">
+                  <label for="member-comment-text">Tulis komentar/pesan</label>
+                  <textarea id="member-comment-text" rows="3" placeholder="Contoh: Mohon perpanjang masa pinjam buku ..."></textarea>
+                </div>
+                <button id="member-comment-send" class="btn primary">Kirim Komentar</button>
+              </div>
+              <div id="comments-list" class="comments-list">
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
